@@ -303,11 +303,11 @@ GPSDriverUBX::configure(unsigned &baudrate, OutputMode output_mode)
 		return -1;
 	}
 
-	if (output_mode == OutputMode::RTCM) {
-		if (restartSurveyIn() < 0) {
-			return -1;
-		}
-	}
+    if (output_mode == OutputMode::RTCM && _buf.payload_rx_nav_svin.meanAcc <= 0) {
+        if (restartSurveyIn() < 0) {
+            return -1;
+        }
+    }
 
 	_configured = true;
 	return 0;
