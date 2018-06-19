@@ -575,7 +575,7 @@ public:
 	virtual ~GPSDriverUBX();
 	int receive(unsigned timeout);
 	int configure(unsigned &baudrate, OutputMode output_mode);
-	void setSurveyInSpecs(uint32_t survey_in_acc_limit, uint32_t survey_in_min_dur);
+    void setSurveyInSpecs(uint32_t survey_in_acc_limit, uint32_t survey_in_min_dur, bool resetSurveyIn);
 
 	int restartSurveyIn();
 private:
@@ -671,6 +671,7 @@ private:
 	const Interface		_interface;
 	uint32_t _survey_in_acc_limit;
 	uint32_t _survey_in_min_dur;
+    bool     _resetSurveyIn;
 };
 
 #endif /* UBX_H_ */

@@ -303,7 +303,7 @@ GPSDriverUBX::configure(unsigned &baudrate, OutputMode output_mode)
 		return -1;
 	}
 
-    if (output_mode == OutputMode::RTCM && _buf.payload_rx_nav_svin.meanAcc <= 0) {
+    if (_resetSurveyIn) {
         if (restartSurveyIn() < 0) {
             return -1;
         }
@@ -326,16 +326,16 @@ int GPSDriverUBX::restartSurveyIn()
 
 	//stop it first
 	//FIXME: stopping the survey-in process does not seem to work
-	memset(&_buf.payload_tx_cfg_tmode3, 0, sizeof(_buf.payload_tx_cfg_tmode3));
-	_buf.payload_tx_cfg_tmode3.flags        = 0; /* disable time mode */
+    memset(&_buf.payload_tx_cfg_tmode3, 0, sizeof(_buf.payload_tx_cfg_tmode3));
+    _buf.payload_tx_cfg_tmode3.flags = 0; /* disable time mode */
 
-	if (!sendMessage(UBX_MSG_CFG_TMODE3, (uint8_t *)&_buf, sizeof(_buf.payload_tx_cfg_tmode3))) {
-		return -1;
-	}
+    if (!sendMessage(UBX_MSG_CFG_TMODE3, (uint8_t *)&_buf, sizeof(_buf.payload_tx_cfg_tmode3))) {
+        return -1;
+    }
 
-	if (waitForAck(UBX_MSG_CFG_TMODE3, UBX_CONFIG_TIMEOUT, true) < 0) {
-		return -1;
-	}
+    if (waitForAck(UBX_MSG_CFG_TMODE3, UBX_CONFIG_TIMEOUT, true) < 0) {
+        return -1;
+    }
 
 	UBX_DEBUG("Starting Survey-in");
 
@@ -1402,9 +1402,10 @@ GPSDriverUBX::fnv1_32_str(uint8_t *str, uint32_t hval)
 }
 
 void
-GPSDriverUBX::setSurveyInSpecs(uint32_t survey_in_acc_limit, uint32_t survey_in_min_dur)
+GPSDriverUBX::setSurveyInSpecs(uint32_t survey_in_acc_limit, uint32_t survey_in_min_dur, bool resetSurveyIn)
 {
-	_survey_in_acc_limit = survey_in_acc_limit;
-	_survey_in_min_dur = survey_in_min_dur;
+    _survey_in_acc_limit    = survey_in_acc_limit;
+    _survey_in_min_dur      = survey_in_min_dur;
+    _resetSurveyIn          = resetSurveyIn;
 }
 
