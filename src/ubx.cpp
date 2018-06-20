@@ -305,8 +305,6 @@ GPSDriverUBX::configure(unsigned &baudrate, OutputMode output_mode)
 		return -1;
 	}
 
-    qDebug() << "Reached disable time mode";
-
     if (disableTimeMode() < 0) {
         return -1;
     }
