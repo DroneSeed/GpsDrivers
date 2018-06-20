@@ -171,6 +171,7 @@
 
 /* TX CFG-TMODE3 message contents */
 #define UBX_TX_CFG_TMODE3_FLAGS     	1 	    	/**< start survey-in */
+#define UBX_TX_CFG_TMODE3_FIXEDLLA      258
 #define UBX_TX_CFG_TMODE3_SVINMINDUR    (3*60)		/**< survey-in: minimum duration [s] (higher=higher precision) */
 #define UBX_TX_CFG_TMODE3_SVINACCLIMIT  (10000)	/**< survey-in: position accuracy limit 0.1[mm] */
 
@@ -575,9 +576,12 @@ public:
 	virtual ~GPSDriverUBX();
 	int receive(unsigned timeout);
 	int configure(unsigned &baudrate, OutputMode output_mode);
-    void setSurveyInSpecs(uint32_t survey_in_acc_limit, uint32_t survey_in_min_dur, bool resetSurveyIn);
+    void setSurveyInSpecs(uint32_t survey_in_acc_limit, uint32_t survey_in_min_dur);
+    void setFixedSurveyLLA(double latitude, double longitude, double altitude);
 
+    int disableTimeMode();
 	int restartSurveyIn();
+    int enableFixedLLA();
 private:
 
 	/**
@@ -671,7 +675,11 @@ private:
 	const Interface		_interface;
 	uint32_t _survey_in_acc_limit;
 	uint32_t _survey_in_min_dur;
-    bool     _resetSurveyIn;
+
+    int32_t _fixed_survey_latitude;
+    int32_t _fixed_survey_longitude;
+    int32_t _fixed_survey_altitude;
+
 };
 
 #endif /* UBX_H_ */
