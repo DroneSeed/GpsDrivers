@@ -305,11 +305,7 @@ GPSDriverUBX::configure(unsigned &baudrate, OutputMode output_mode)
 		return -1;
 	}
 
-    if (disableTimeMode() < 0) {
-        return -1;
-    }
-
-    if (restartSurveyIn() < 0) {
+    if (!configureMessageRateAndAck(UBX_MSG_NAV_SVIN, 5, true)) {
         return -1;
     }
 
@@ -324,23 +320,18 @@ int GPSDriverUBX::disableTimeMode()
         return -1;
     }
 
-    // disable RTCM output
-    configureMessageRate(UBX_MSG_RTCM3_1005, 0);
-    configureMessageRate(UBX_MSG_RTCM3_1077, 0);
-    configureMessageRate(UBX_MSG_RTCM3_1087, 0);
+    decodeInit();
 
-    //stop it first
-    //FIXME: stopping the survey-in process does not seem to work
+    // disable RTCM output
+    configureMessageRateAndAck(UBX_MSG_RTCM3_1005, 0);
+    configureMessageRateAndAck(UBX_MSG_RTCM3_1077, 0);
+    configureMessageRateAndAck(UBX_MSG_RTCM3_1087, 0);
+
     memset(&_buf.payload_tx_cfg_tmode3, 0, sizeof(_buf.payload_tx_cfg_tmode3));
     _buf.payload_tx_cfg_tmode3.flags = 0; /* disable time mode */
 
-    if (!sendMessage(UBX_MSG_CFG_TMODE3, (uint8_t *)&_buf, sizeof(_buf.payload_tx_cfg_tmode3))) {
-        return -1;
-    }
-
-    if (waitForAck(UBX_MSG_CFG_TMODE3, UBX_CONFIG_TIMEOUT, true) < 0) {
-        return -1;
-    }
+    sendMessage(UBX_MSG_CFG_TMODE3, (uint8_t *)&_buf, sizeof(_buf.payload_tx_cfg_tmode3));
+    waitForAck(UBX_MSG_CFG_TMODE3, UBX_CONFIG_TIMEOUT, true);
 
     return 0;
 }
@@ -354,18 +345,15 @@ int GPSDriverUBX::restartSurveyIn()
 	_buf.payload_tx_cfg_tmode3.svinMinDur   = _survey_in_min_dur;
 	_buf.payload_tx_cfg_tmode3.svinAccLimit = _survey_in_acc_limit;
 
-	if (!sendMessage(UBX_MSG_CFG_TMODE3, (uint8_t *)&_buf, sizeof(_buf.payload_tx_cfg_tmode3))) {
-        return -1;
-	}
+    sendMessage(UBX_MSG_CFG_TMODE3, (uint8_t *)&_buf, sizeof(_buf.payload_tx_cfg_tmode3));
+    waitForAck(UBX_MSG_CFG_TMODE3, UBX_CONFIG_TIMEOUT, true);
 
-	if (waitForAck(UBX_MSG_CFG_TMODE3, UBX_CONFIG_TIMEOUT, true) < 0) {
-		return -1;
-	}
+    decodeInit();
 
-	/* enable status output of survey-in */
-	if (!configureMessageRateAndAck(UBX_MSG_NAV_SVIN, 5, true)) {
-		return -1;
-	}
+    // disable RTCM output
+    configureMessageRateAndAck(UBX_MSG_RTCM3_1005, 0);
+    configureMessageRateAndAck(UBX_MSG_RTCM3_1077, 0);
+    configureMessageRateAndAck(UBX_MSG_RTCM3_1087, 0);
 
 	return 0;
 }
@@ -383,18 +371,8 @@ int GPSDriverUBX::enableFixedLLA()
     _buf.payload_tx_cfg_tmode3.svinMinDur   = _survey_in_min_dur;
     _buf.payload_tx_cfg_tmode3.svinAccLimit = _survey_in_acc_limit;
 
-    if (!sendMessage(UBX_MSG_CFG_TMODE3, (uint8_t *)&_buf, sizeof(_buf.payload_tx_cfg_tmode3))) {
-        return -1;
-    }
-
-    if (waitForAck(UBX_MSG_CFG_TMODE3, UBX_CONFIG_TIMEOUT, true) < 0) {
-        return -1;
-    }
-
-    /* enable status output of survey-in */
-    if (!configureMessageRateAndAck(UBX_MSG_NAV_SVIN, 5, true)) {
-        return -1;
-    }
+    sendMessage(UBX_MSG_CFG_TMODE3, (uint8_t *)&_buf, sizeof(_buf.payload_tx_cfg_tmode3));
+    waitForAck(UBX_MSG_CFG_TMODE3, UBX_CONFIG_TIMEOUT, true);
 
     return 0;
 }
@@ -1206,37 +1184,27 @@ GPSDriverUBX::payloadRxDone()
 			surveyInStatus(status);
 
 			if (svin.valid == 1 && svin.active == 0) {
-				/* We now switch to 1 Hz update rate, which is enough for RTCM output.
-				 * For the survey-in, we still want 5 Hz, because this speeds up the process */
-				memset(&_buf.payload_tx_cfg_rate, 0, sizeof(_buf.payload_tx_cfg_rate));
-				_buf.payload_tx_cfg_rate.measRate	= 1000;
-				_buf.payload_tx_cfg_rate.navRate	= UBX_TX_CFG_RATE_NAVRATE;
-				_buf.payload_tx_cfg_rate.timeRef	= UBX_TX_CFG_RATE_TIMEREF;
+                /* We now switch to 1 Hz update rate, which is enough for RTCM output.
+                 * For the survey-in, we still want 5 Hz, because this speeds up the process */
+//                memset(&_buf.payload_tx_cfg_rate, 0, sizeof(_buf.payload_tx_cfg_rate));
+//                _buf.payload_tx_cfg_rate.measRate	= 1000;
+//                _buf.payload_tx_cfg_rate.navRate	= UBX_TX_CFG_RATE_NAVRATE;
+//                _buf.payload_tx_cfg_rate.timeRef	= UBX_TX_CFG_RATE_TIMEREF;
 
-				if (!sendMessage(UBX_MSG_CFG_RATE, (uint8_t *)&_buf, sizeof(_buf.payload_tx_cfg_rate))) {
-					return -1;
-				}
+//                if (!sendMessage(UBX_MSG_CFG_RATE, (uint8_t *)&_buf, sizeof(_buf.payload_tx_cfg_rate))) {
+//                    return -1;
+//                }
 
-				//according to the spec, we should receive an (N)ACK here, but we don't
-//				decodeInit();
-//				if (waitForAck(UBX_MSG_CFG_RATE, UBX_CONFIG_TIMEOUT, true) < 0) {
-//					return -1;
-//				}
-
-				configureMessageRate(UBX_MSG_NAV_SVIN, 0);
+//                // according to the spec, we should receive an (N)ACK here, but we don't
+                  decodeInit();
+//                if (waitForAck(UBX_MSG_CFG_RATE, UBX_CONFIG_TIMEOUT, true) < 0) {
+//                    return -1;
+//                }
 
 				/* enable RTCM3 messages */
-				if (!configureMessageRate(UBX_MSG_RTCM3_1005, 1)) {
-					return -1;
-				}
-
-				if (!configureMessageRate(UBX_MSG_RTCM3_1077, 1)) {
-					return -1;
-				}
-
-				if (!configureMessageRate(UBX_MSG_RTCM3_1087, 1)) {
-					return -1;
-				}
+                configureMessageRateAndAck(UBX_MSG_RTCM3_1005, 5);
+                configureMessageRateAndAck(UBX_MSG_RTCM3_1077, 5);
+                configureMessageRateAndAck(UBX_MSG_RTCM3_1087, 5);
 			}
 		}
 
