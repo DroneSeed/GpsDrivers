@@ -367,12 +367,22 @@ int GPSDriverUBX::enableFixedLLA()
     _buf.payload_tx_cfg_tmode3.ecefXOrLat   = _fixed_survey_latitude;
     _buf.payload_tx_cfg_tmode3.ecefYOrLon   = _fixed_survey_longitude;
     _buf.payload_tx_cfg_tmode3.ecefZOrAlt   = _fixed_survey_altitude;
+    _buf.payload_tx_cfg_tmode3.ecefXOrLatHP = _fixed_survey_latitudeHP;
+    _buf.payload_tx_cfg_tmode3.ecefYOrLonHP = _fixed_survey_longitudeHP;
+    _buf.payload_tx_cfg_tmode3.ecefZOrAltHP = _fixed_survey_altitudeHP;
     _buf.payload_tx_cfg_tmode3.fixedPosAcc  = 1;
     _buf.payload_tx_cfg_tmode3.svinMinDur   = _survey_in_min_dur;
     _buf.payload_tx_cfg_tmode3.svinAccLimit = _survey_in_acc_limit;
 
     sendMessage(UBX_MSG_CFG_TMODE3, (uint8_t *)&_buf, sizeof(_buf.payload_tx_cfg_tmode3));
     waitForAck(UBX_MSG_CFG_TMODE3, UBX_CONFIG_TIMEOUT, true);
+
+    decodeInit();
+
+    // enable RTCM output
+    configureMessageRateAndAck(UBX_MSG_RTCM3_1005, 5);
+    configureMessageRateAndAck(UBX_MSG_RTCM3_1077, 5);
+    configureMessageRateAndAck(UBX_MSG_RTCM3_1087, 5);
 
     return 0;
 }
@@ -990,7 +1000,8 @@ GPSDriverUBX::payloadRxDone()
 
 		_gps_position->lat		= _buf.payload_rx_nav_pvt.lat;
 		_gps_position->lon		= _buf.payload_rx_nav_pvt.lon;
-		_gps_position->alt		= _buf.payload_rx_nav_pvt.hMSL;
+        _gps_position->alt		= _buf.payload_rx_nav_pvt.hMSL;
+        _gps_position->alt_ellipsoid = _buf.payload_rx_nav_pvt.height;
 
 		_gps_position->eph		= (float)_buf.payload_rx_nav_pvt.hAcc * 1e-3f;
 		_gps_position->epv		= (float)_buf.payload_rx_nav_pvt.vAcc * 1e-3f;
@@ -1079,7 +1090,7 @@ GPSDriverUBX::payloadRxDone()
 
 		_gps_position->lat	= _buf.payload_rx_nav_posllh.lat;
 		_gps_position->lon	= _buf.payload_rx_nav_posllh.lon;
-		_gps_position->alt	= _buf.payload_rx_nav_posllh.hMSL;
+        _gps_position->alt	= _buf.payload_rx_nav_posllh.hMSL;
 		_gps_position->eph	= (float)_buf.payload_rx_nav_posllh.hAcc * 1e-3f; // from mm to m
 		_gps_position->epv	= (float)_buf.payload_rx_nav_posllh.vAcc * 1e-3f; // from mm to m
 		_gps_position->alt_ellipsoid = _buf.payload_rx_nav_posllh.height;
@@ -1184,22 +1195,7 @@ GPSDriverUBX::payloadRxDone()
 			surveyInStatus(status);
 
 			if (svin.valid == 1 && svin.active == 0) {
-                /* We now switch to 1 Hz update rate, which is enough for RTCM output.
-                 * For the survey-in, we still want 5 Hz, because this speeds up the process */
-//                memset(&_buf.payload_tx_cfg_rate, 0, sizeof(_buf.payload_tx_cfg_rate));
-//                _buf.payload_tx_cfg_rate.measRate	= 1000;
-//                _buf.payload_tx_cfg_rate.navRate	= UBX_TX_CFG_RATE_NAVRATE;
-//                _buf.payload_tx_cfg_rate.timeRef	= UBX_TX_CFG_RATE_TIMEREF;
-
-//                if (!sendMessage(UBX_MSG_CFG_RATE, (uint8_t *)&_buf, sizeof(_buf.payload_tx_cfg_rate))) {
-//                    return -1;
-//                }
-
-//                // according to the spec, we should receive an (N)ACK here, but we don't
-                  decodeInit();
-//                if (waitForAck(UBX_MSG_CFG_RATE, UBX_CONFIG_TIMEOUT, true) < 0) {
-//                    return -1;
-//                }
+                decodeInit();
 
 				/* enable RTCM3 messages */
                 configureMessageRateAndAck(UBX_MSG_RTCM3_1005, 5);
@@ -1416,10 +1412,14 @@ GPSDriverUBX::setSurveyInSpecs(uint32_t survey_in_acc_limit, uint32_t survey_in_
 }
 
 void
-GPSDriverUBX::setFixedSurveyLLA(double latitude, double longitude, double altitude)
+GPSDriverUBX::setFixedSurveyLLA(int32_t latitude, int32_t longitude, int32_t altitude, int8_t latitudeHP, int8_t longitudeHP, int8_t altitudeHP)
 {
-    _fixed_survey_latitude  = (int32_t)(latitude  * 1e7);
-    _fixed_survey_longitude = (int32_t)(longitude * 1e7);
-    _fixed_survey_altitude  = (int32_t)(altitude  * 100);
+    _fixed_survey_latitude  = latitude;
+    _fixed_survey_longitude = longitude;
+    _fixed_survey_altitude  = altitude;
+
+    _fixed_survey_latitudeHP  = latitudeHP;
+    _fixed_survey_longitudeHP = longitudeHP;
+    _fixed_survey_altitudeHP  = altitudeHP;
 }
 

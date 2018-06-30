@@ -577,7 +577,7 @@ public:
 	int receive(unsigned timeout);
 	int configure(unsigned &baudrate, OutputMode output_mode);
     void setSurveyInSpecs(uint32_t survey_in_acc_limit, uint32_t survey_in_min_dur);
-    void setFixedSurveyLLA(double latitude, double longitude, double altitude);
+    void setFixedSurveyLLA(int32_t latitude, int32_t longitude, int32_t altitude, int8_t latitudeHP, int8_t longitudeHP, int8_t altitudeHP);
 
     int disableTimeMode();
 	int restartSurveyIn();
@@ -679,6 +679,10 @@ private:
     int32_t _fixed_survey_latitude;
     int32_t _fixed_survey_longitude;
     int32_t _fixed_survey_altitude;
+
+    int8_t  _fixed_survey_latitudeHP;
+    int8_t  _fixed_survey_longitudeHP;
+    int8_t  _fixed_survey_altitudeHP;
 
 };
 
