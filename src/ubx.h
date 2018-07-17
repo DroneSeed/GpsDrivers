@@ -169,6 +169,7 @@
 
 /* TX CFG-TMODE3 message contents */
 #define UBX_TX_CFG_TMODE3_FLAGS     	1 	    	/**< start survey-in */
+#define UBX_TX_CFG_TMODE3_FIXEDLLA      258
 #define UBX_TX_CFG_TMODE3_SVINMINDUR    (3*60)		/**< survey-in: minimum duration [s] (higher=higher precision) */
 #define UBX_TX_CFG_TMODE3_SVINACCLIMIT  (10000)	/**< survey-in: position accuracy limit 0.1[mm] */
 
@@ -574,12 +575,15 @@ public:
 
 	virtual ~GPSDriverUBX();
 
-	int receive(unsigned timeout) override;
-	int configure(unsigned &baudrate, OutputMode output_mode) override;
+    int receive(unsigned timeout) override;
+    int configure(unsigned &baudrate, OutputMode output_mode) override;
+    void setSurveyInSpecs(uint32_t survey_in_acc_limit, uint32_t survey_in_min_dur);
+    void setFixedSurveyLLA(int32_t latitude, int32_t longitude, int32_t altitude, int8_t latitudeHP, int8_t longitudeHP, int8_t altitudeHP);
 
-	int restartSurveyIn() override;
+    int disableTimeMode();
+    int restartSurveyIn() override;
+    int enableFixedLLA();
 
-	void setSurveyInSpecs(uint32_t survey_in_acc_limit, uint32_t survey_in_min_dur);
 private:
 
 	/**
@@ -673,6 +677,14 @@ private:
 	const Interface		_interface;
 	uint32_t _survey_in_acc_limit;
 	uint32_t _survey_in_min_dur;
+
+    int32_t _fixed_survey_latitude;
+    int32_t _fixed_survey_longitude;
+    int32_t _fixed_survey_altitude;
+
+    int8_t  _fixed_survey_latitudeHP;
+    int8_t  _fixed_survey_longitudeHP;
+    int8_t  _fixed_survey_altitudeHP;
 
 	// ublox Dynamic platform model default 7: airborne with <2g acceleration
 	uint8_t _dyn_model{7};
